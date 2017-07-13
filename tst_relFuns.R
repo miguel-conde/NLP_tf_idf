@@ -1,6 +1,11 @@
 # GET CORDIS DATA
-library(readxl)
-cordis_h2020projects <- read_excel("./DATA/cordis-h2020projects.xlsx")
+# library(readxl)
+# cordis_h2020projects <- read_excel("./DATA/cordis-h2020projects.xlsx")
+
+myURL <- "http://cordis.europa.eu/data/cordis-h2020projects.csv"
+
+library(data.table)
+cordis_h2020projects <- fread(myURL)
 
 ## Health topics
 library(dplyr)
@@ -36,9 +41,10 @@ inspect(removeSparseTerms(health_proy_tdm, 0.87))
 # BUILD TDM WITH TfIdf
 health_proy_tdm_TfIdf <- TermDocumentMatrix(health_proy_corp,
                                             control = list(weighting = weightTfIdf))
-findFreqTerms(health_proy_tdm_TfIdf, 20)
+findFreqTerms(health_proy_tdm_TfIdf, 1.0)
 findAssocs(health_proy_tdm_TfIdf, "diabet", 0.3)
 inspect(removeSparseTerms(health_proy_tdm_TfIdf, 0.87))
+# health_proy_tdm_TfIdf <- removeSparseTerms(health_proy_tdm_TfIdf, 0.87)
 
 
 # LSA ---------------------------------------------------------------------
@@ -72,7 +78,7 @@ source("lsaRelFuns.R")
 head(relDocs4Query(health_proy_tdm_TfIdf, c("diabet")))
 head(relDocs4Query(health_proy_tdm_TfIdf, c("diabet", "data")))
 
-head(relWordsInDocs(health_proy_tdm_TfIdf, c(88)))
+head(relWordsInDocs(health_proy_tdm_TfIdf, c(42)))
 head(relWordsInDocs(health_proy_tdm_TfIdf, c(80, 34, 88, 70, 12)))
 
 
@@ -84,22 +90,41 @@ BigramTokenizer <- function(x) {
 
 tdmCtrl <- list(tokenize = BigramTokenizer, 
                 weighting = weightTfIdf)
-health_proy_tdm_TfIdf <- TermDocumentMatrix(health_proy_corp,
+health_proy_tdm_TfIdf2 <- TermDocumentMatrix(health_proy_corp,
                                             control = tdmCtrl)
-inspect(removeSparseTerms(health_proy_tdm_TfIdf[, 1:10], 0.9))
+inspect(removeSparseTerms(health_proy_tdm_TfIdf2[, 1:10], 0.9))
+# health_proy_tdm_TfIdf2 <- removeSparseTerms(health_proy_tdm_TfIdf2, 0.99)
 
 ##
-grep("diabet", health_proy_tdm_TfIdf$dimnames$Terms, value = TRUE)
-head(relDocs4Query(health_proy_tdm_TfIdf, c("diabet care")))
+grep("diabet", health_proy_tdm_TfIdf2$dimnames$Terms, value = TRUE)
+head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care")))
 vProy[34]
 vProy[70]
 
-head(relDocs4Query(health_proy_tdm_TfIdf, c("diabet care", "ambulatori set")))
-head(relDocs4Query(health_proy_tdm_TfIdf, c("diabet care", "analysi data",
+head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care", "ambulatori set")))
+head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care", "analysi data",
                                             "big data", "data analysi", 
                                             "data analyt")))
-head(relDocs4Query(health_proy_tdm_TfIdf, c("diabet care", "ambulatori set")))
+head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care", "ambulatori set")))
 
 
-head(relWordsInDocs(health_proy_tdm_TfIdf, c(88)))
-head(relWordsInDocs(health_proy_tdm_TfIdf, c(80, 34, 88, 70, 12)))
+head(relWordsInDocs(health_proy_tdm_TfIdf2, c(88)))
+head(relWordsInDocs(health_proy_tdm_TfIdf2, c(80, 34, 88, 70, 12)))
+
+# Probatina 1-grams + 2-grams
+multi_tdm <- rbind(as.matrix(health_proy_tdm_TfIdf),
+                   as.matrix(health_proy_tdm_TfIdf2))
+head(relDocs4Query(multi_tdm, c("diabet", "analysi data",
+                                "big data", "data analysi",
+                                "data analyt")))
+vProy[50]
+
+intTerms <- grep("diabet | data", health_proy_tdm_TfIdf2$dimnames$Terms)
+head(relDocs4Query(health_proy_tdm_TfIdf2, 
+                   health_proy_tdm_TfIdf2$dimnames$Terms[intTerms]))
+vProy[70]
+
+intTerms <- grep("diabet", health_proy_tdm_TfIdf2$dimnames$Terms)
+head(relDocs4Query(health_proy_tdm_TfIdf2, 
+                   health_proy_tdm_TfIdf2$dimnames$Terms[intTerms]))
+vProy[70]

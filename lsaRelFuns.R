@@ -1,5 +1,6 @@
 library(lsa)
 
+# RELevant DOCS FOR a QUERY
 relDocs4Query <- function(tdm, qWords) {
   A <- as.matrix(tdm)
   lsaSpace <- lsa(A)  # create LSA space
@@ -23,6 +24,7 @@ relDocs4Query <- function(tdm, qWords) {
   query_rank
 }
 
+# RELevant WORDS IN a set of DOCumentS
 relWordsInDocs <- function(tdm, qDocs) {
   A <- as.matrix(tdm)
   lsaSpace <- lsa(A)  # create LSA space
