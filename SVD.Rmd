@@ -1,0 +1,304 @@
+---
+title: "Singular Value Decomposition"
+author: "Miguel Conde"
+date: "30 de junio de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+http://webhome.cs.uvic.ca/~thomo/svd.pdf
+
+## Eigenvalues and eigenvectors
+
+Let $A$ be an $n \times n$ real matrix and $x$ a $n-$dimensional vector. 
+
+Just in the cases that:
+
+$$
+Ax = \lambda x
+$$
+
+We say that $\lambda$ is an ** *eigenvalue* ** of $A$ and $x$ is an ** *autovector* ** of $A$.
+
+* Multiplicating a matrix $A$ times one of its autovectors doesn't change the direction of the outovector, just its module.
+* If $x$ is an autovector of $A$, then $ax$ ($a$ scalar) is also an autovector of $A$
+    +  If we consider only one eigenvector for each $ax$ family, then there is a 1-1 correspondence of such eigenvectors to eigenvalues. 
+    + Typically, we consider eigenvectors of unit length.
+
+### Diagonal matrices
+It's very easy. For example this matrix:
+
+$$
+\left( \begin{array}{ccc}
+4 & 0 & 0 \\
+0 & 3 & 0 \\
+0 & 0 & 2 \end{array} \right)
+$$
+
+has the following eigenvalues and eigenvectors:
+
+$$
+\lambda_1 = 4 \\
+x_1 = \left[ \begin{array}{c}
+1 \\
+0 \\
+0 \\ \end{array} \right]
+$$
+
+$$ 
+\lambda_1 = 3 \\
+x_1 = \left[ \begin{array}{c}
+0 \\
+1 \\
+0 \\ \end{array} \right]
+$$
+
+$$
+\lambda_1 = 2 \\
+x_1 = \left[ \begin{array}{c}
+0 \\
+0 \\
+1 \\ \end{array} \right]
+$$
+
+### General matrices
+
+$$
+Ax = \lambda x \\
+(A - \lambda I)x = 0
+$$
+* Since $x$ is non-zero, matrix $A - \lambda I$ has dependent columns and thus its determinant $|A - \lambda I|$ must be zero; i.e., the eigenvalues of $A$ are the solutions of:
+
+$$
+|A - \lambda I| = 0
+$$
+
+
+* For each of these eigenvalues the equation $(A - \lambda I)x = 0$ can be used to find the corresponding eigenvectors.
+
+* In general, for an $n \times n$ matrix $A$, the determinant $|A - \lambda I|$ will give a polynomial of degree $n$ which has $n$ roots. In other words, the equation $|A - \lambda I| = 0$ will give $n$ eigenvalues.
+
+
+### In R
+
+```{r}
+A <- matrix(c(4, 0, 0, 0, 3, 0, 0, 0, 2), 3, 3)
+eigen(A)
+```
+
+## "Diagonalizing" $A$
+Let $S$ be an $n \times n$ matrix whose $n$ columns are the $n$ eigenvectors of $A$. Therefore:
+
+$$
+AS = A[x_1 x_2 ... x_n] =Ax_1 + A_x2 + ... Ax_n = \\
+\lambda_1 x_1 + \lambda_2 x_2 + ... + \lambda_n x_n = \\
+[x_1 x_2 ... x_n] \left[\begin{array}{ccc}
+\lambda_1 & 0 & 0 \\
+0 & \lambda_2 & 0 \\
+0 & 0 & \lambda_3 \end{array} \right] = \\
+S \Lambda
+$$
+
+where $\Lambda$ is the above diagonal matrix with the eigenvalues of $A$ along its diagonal. 
+
+* If the $n$ eigenvectors are linearly independent - the matrix has $n$ distinct eigenvalues -, then $S$ is invertible and:
+
+$$
+AS = S \Lambda \\
+ASS^{-1} = A = S \Lambda S^{-1}\\
+$$
+
+* So, we were able to “diagonalize” matrix $A$ in terms of the diagonal matrix $\Lambda$ spelling the eigenvalues of $A$ along its diagonal. 
+    + This was possible because matrix $S$ was invertible. 
+    + When there are fewer than $n$ eigenvalues then it might happen that the diagonalization is not possible. In such a case the matrix is “defective” having too few eigenvectors.
+    
+#### In R
+```{r}
+S <- eigen(A)$vectors
+Lambda <- diag(eigen(A)$values)
+
+S %*% Lambda %*% solve(S)
+```
+
+### Symmetric $A$ matrices
+$A$ is symmetric if and only if $A = A^T$.
+
+* $n \times n$ symmetric matrices always have real eigenvalues and their eigenvectors are perpendicular. Hence:
+
+$$
+S^T S = \left( \begin{array}{c} 
+x_1^T \\
+x_2^T \\
+...   \\
+x_n^T \end{array} \right) [x_1 x_2 ... x_n] = \left( \begin{array}{} 
+1 & 0 & ... & 0 \\
+0 & 1 & ... & 0 \\
+0 & 0 & ... & 0 \\
+0 & 0 & ... & 1 \end{array} \right) = I
+$$
+
+* In other words, for symmetric matrices, $S^{-1}$ is $S^T$ and:
+
+$$
+S^T S = S^{-1}S = I \\
+A = S \Lambda S^{-1} = S \Lambda S^T
+$$
+
+## Singular Value Decomposition
+
+* Now let $A$ be a $m \times n$ real matrix, with $m > n$.
+
+* Let us consider a new $n \times n$ matrix, $B = A^T A$.  
+    + $B$ is symmetric: $B^T = (A^T A)^T = A^t A = B$.
+    + Therefore, the eigenvalues of B are non-negative real numbers.
+        + we can write them in decreasing order as squares of non-negative real numbers: $\sigma_1^2 \geq \sigma_2^2  \geq ... \geq \sigma_n^2$.
+            + For some index $r$ (possibly $n$) the first $r$ numbers $\sigma_1, \sigma_2,...,\sigma_r$ are positive whereas the rest are zero.
+    + The corresponding eigenvectors $x_1, x_2,...,x_r$ are ortoghonal (and, in order to make them orthonormal, we normaliza them to length 1)
+    
+* Let $S_B = (x_1 x_2 ... x_r)$
+
+* We now create the following $r$ $m$-dimensional vectors:
+
+$$
+y_i = \frac{1}{\sigma_i}Ax_i, 1 \leq i \leq r
+$$
+* They are orthonormal vectors:
+
+$$
+y_i^T y_j = (\frac{1}{\sigma_i}Ax_i)^T \frac{1}{\sigma_j}Ax_j = \frac{1}{\sigma_i} \frac{1}{\sigma_j}(x_i^TA^T)Ax_j = \frac{1}{\sigma_i} \frac{1}{\sigma_j}x_i^TBx_j = \\
+\frac{1}{\sigma_i}\frac{1}{\sigma_j}x_i^T\sigma_j^2x_j = \frac{\sigma_j}{\sigma_i}x_i^Tx_j = \begin{cases}
+                                       1, & \text{if $i = j$}.\\
+                                       0, & \text{otherwise}.
+                                    \end{cases}
+$$
+
+* Let now be:
+
+$$
+S = (y_1, y_2 ... y_r)
+$$
+
+Considering that:
+$$
+y_j^T AX_i = y_j^T (\sigma_i y_i) = \sigma_i y_j^T y_i = \begin{cases}
+                                       \sigma_i, & \text{if $i = j$}.\\
+                                       0, & \text{otherwise}.
+                                    \end{cases}
+$$
+we can define a $r \times r$ diagonal matrix, $\sum$ with $\sigma_1, \sigma_2, ...,\sigma_r$ along the diagonal:
+
+$$
+S^T A S_B = \sum
+$$
+Observe that:
+
+* $S^T$ is $r \times m$, $A$ is $m \times n$ and $S_B$ is $n \times r$.
+
+* $S$ and $S_B$ have orthonormal columns, so:
+    + $S S^T = I_{m \times m}$
+    + $S_B S_B^T = I_{n \times n}$
+    
+* In consequence:
+
+$$
+S^T A S_B = \sum \\
+S S^T A S_B S_B^T = S \sum S_B^T \\
+A = S \sum S_B^T
+$$
+
+* The above decomposition of $A$ into $S \sum S_B^T$ is known as *singular value decomposition*
+* $r \times r$ matrix $\sum$ is  diagonal and the values along the diagonal are $\sigma_1, \sigma_2, ...,\sigma_r$, which are called *singular values*.
+    +  They are the square roots of the eigenvalues of $A^T A$ and thus completely determined by $A$.
+* $n \times r$ matrix $S_B$ columns are the eigenvectors of $A^T A$
+* $m \times r$ matrix $S$ columns are made of orthonormal vectors $y_i = \frac{1}{\sigma_i} A x_i$.
+
+### Example in R
+
+**$A$ $m=4 \times n=3$ matrix**
+```{r}
+A <- matrix(c(1,2,3,4,5,6,7,8,9, 10, 11, 12), ncol = 3)
+A
+```
+
+```{r}
+# My calcs
+ave <- sqrt(eigen(t(A) %*% A, symmetric = isSymmetric(A))$values)
+U <- eigen(A %*% t(A), symmetric = isSymmetric(A))$vectors
+D <- diag(ave, nrow = nrow(A), ncol = ncol(A))
+V <- eigen(t(A) %*% A, symmetric = isSymmetric(A))$vectors
+
+# R calcs
+R_svd <- svd(A, nv = ncol(A), nu = nrow(A)) 
+```
+
+
+
+**1 - $S = U$ $m=4 \times r=3$ matrix**
+
+```{r}
+U
+```
+
+```{r}
+R_svd$u
+```
+
+**2 - $\sum$ $r=3 \times r=3$ matrix**
+```{r}
+D
+```
+
+```{r}
+R_svd$d
+```
+
+**3 - $S_B = V$ $n=3 \times r=3$ matrix**
+```{r}
+V
+```
+```{r}
+R_svd$v
+```
+
+Check:
+```{r}
+U %*% D %*% t(V)
+```
+
+```{r}
+R_svd$u %*% diag(R_svd$d, nrow = nrow(A), ncol = ncol(A)) %*% t(R_svd$v)
+```
+
+
+
+
+## SVD Uses
+
+http://davetang.org/file/Singular_Value_Decomposition_Tutorial.pdf
+
+Singular value decomposition (SVD) can be looked at from three mutually compatible points
+of view:
+
+1 - On the one hand, we can see it as a method for transforming correlated variables into a set of uncorrelated ones that better expose the various relationships among the original data items. 
+
+2 - At the same time, SVD is a method for identifying and ordering the dimensions along which data points exhibit the most variation. 
+
+3 - This ties in to the third way of viewing SVD, which is that once we have identified where the most variation is, it’s possible to find the best approximation of the original data points using fewer dimensions. Hence, SVD can be seen as a method for data reduction.
+
+These are the basic ideas behind SVD: taking a high dimensional, highly variable set of data points and reducing it to a lower dimensional space that exposes the substructure of the original data more clearly and orders it from most variation to the least. 
+
+What makes SVD practical for NLP applications is that you can simply ignore variation below a particular threshhold to massively reduce your data but be assured that the main relationships of interest have been preserved.
+
+https://www.google.es/url?sa=t&rct=j&q=&esrc=s&source=web&cd=6&cad=rja&uact=8&ved=0ahUKEwjFzLXJmOrUAhVOEVAKHQwlAIgQFghOMAU&url=http%3A%2F%2Fcms.dm.uba.ar%2Facademico%2Fmaterias%2Fverano2016%2Felementos_calculo_numerico_M%2Fsvd.pdf&usg=AFQjCNEvFURsWU-oeNg6K4JXBdZxi5GRqQ
+
+
+http://mplab.ucsd.edu/tutorials/svd.pdf
+http://www.math.vt.edu/people/embree/cmda3606/chapter8.pdf
+http://davetang.org/file/Singular_Value_Decomposition_Tutorial.pdf
+https://www.researchgate.net/publication/246546380_Singular_Value_Decomposition_Tutorial
+http://www.ehu.eus/izaballa/Cursos/valores_singulares.pdf
+http://www.mate.unlp.edu.ar/practicas/70_18_0911201012951
+http://www.math.vt.edu/people/embree/cmda3606/chapter8.pdf

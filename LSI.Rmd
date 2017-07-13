@@ -1,0 +1,243 @@
+---
+title: "Latent Semantic Indexing"
+author: "Miguel Conde"
+date: "3 de julio de 2017"
+output: 
+  slidy_presentation:
+    higlight: tango
+    font_adjustment: -1
+    duration: 20
+    footer: "Copyright (c) 2014, RStudio"
+    df_print: kable
+    mathjax: default
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+http://webhome.cs.uvic.ca/~thomo/svd.pdf
+
+* *Latent Semantic Indexing* (LSI) is a method for discovering hidden concepts in document data.
+* Each document and term (word) is then expressed as a vector with elements corresponding to these concepts. 
+Each element in a vector gives the degree of participation of the document or term in the corresponding concept. 
+* The goal is not to describe the concepts verbally, but to be able to represent
+the documents and terms in a unified way for exposing document-document, document-term, and term-term similarities or semantic relationship which are otherwise hidden.
+
+## An example
+Consider the following set of documents:
+```{r}
+d1 <- "Romeo and Juliet."
+d2 <- "Juliet: O happy dagger!"
+d3 <- "Romeo died by dagger."
+d4 <- "'Live free or die', that’s the New-Hampshire’s motto."
+d5 <- "Did you know, New-Hampshire is in New-England."
+```
+
+and a **search query**: *dies*, *dagger*.
+
+* d3 should be ranked top
+* d2 (*dagger*) and d4 (*died*) should follow
+
+What about d1 and d5? d1 is quite related (we as human know that "romeo and Juliet" has to do with "die" and "dagger"), but d5 isn't.
+
+We would like d1 to be ranked than d5.
+
+A machine can deduce this using LSI.
+
+*dagger* occurs together with "Juliet" in d2 and with "Romeo" in d3.
+
+*dies* occurs together with "Romeo" in d3 and with "New-Hampshire" in d4.
+
+d1 is more related to the query than d5 cause d1 is doubly connected to *dagger* and also connected to "die" throug "Romeo" in d3, but d5 has only a single connection to the query through New-Hampshire.
+
+Let $A$ be the term-document matrix for our corpus of documents:
+```{r}
+library(tm)
+
+vDoc <- c(d1, d2, d3, d4, d5)
+doc_corp <- VCorpus(VectorSource(vDoc),
+                            readerControl = list(language = "en"))
+
+doc_corp <- tm_map(doc_corp, removePunctuation)
+f <- content_transformer(function(x, pattern, s) gsub(pattern, s, x))
+doc_corp <- tm_map(doc_corp, f, "['’]", " ")
+doc_corp <- tm_map(doc_corp, f, "[[:punct:]]+", " ")
+doc_corp <- tm_map(doc_corp, content_transformer(tolower))
+doc_corp <- tm_map(doc_corp, removeWords, stopwords("english"))
+doc_corp <- tm_map(doc_corp, f, " s ", " ")
+doc_corp <- tm_map(doc_corp, stripWhitespace)
+doc_corp <- tm_map(doc_corp, stemDocument, language = "english") 
+
+doc_tdm <- TermDocumentMatrix(doc_corp)
+inspect(doc_tdm)
+
+A <- as.matrix(inspect(doc_tdm))
+```
+
+OBSERVE THAT:
+
+1 - $B = A^T A$ is the **document-document* matrix: if documents $i$ and $j$ have $b$ words in common, then $B[i,j]=b$.
+```{r}
+B <- t(A) %*% A
+B
+```
+2 - $C= A A^T$ is the **term-term** matrix: if terms $i$ and $j$ occur together in $c$ documents, then $C[i,j] = c$.
+```{r}
+C <- A %*% t(A)
+C
+```
+
+* Now we perform an SVD on A:
+
+$$
+A = S \Sigma U^T
+$$
+* $S$ is the matrix of eigenvectors of $B$
+```{r}
+svd_A <- svd(A)
+S <- svd_A$u
+S
+```
+
+
+* $U$ is the matrix of eigenvectors of $C$
+```{r}
+U <- svd_A$v
+U
+```
+
+* $\Sigma$ is the diagonal matrix of the singular values obtained as square roots of the eigenvalues of B.
+
+```{r}
+D <- diag(svd_A$d)
+D
+```
+
+As you can see, the singular values along the diagonal of $\Sigma$ are listed in descending order of their magnitude.
+
+Some of the singular values are “too small” and thus “negligible.” What really constitutes “too small” is usually determined empirically. 
+
+In LSI we ignore these small singular values and replace them by 0. 
+
+Let us say that we only keep $k$ singular values in $\Sigma$. Then $\Sigma$ will be all zeros except the first $k$ entries along its diagonal.
+
+Hence:
+
+$$
+A \approx S_k \Sigma_k U_k^T
+$$
+
+* Intuitively, the $k$ remaning ingredients of the eigenvectors in $S$ and $U$ correspond to $k$ **“hidden concepts”** where the terms and documents participate. 
+
+* The terms and documents have now a new representation in terms of these hidden concepts. 
+
+    + Namely, the *terms* are represented by the row vectors of the $m × k$ matrix $S_k \Sigma_k$
+    + Whereas the *documents* by the column vectors the $k × n$ matrix $\Sigma_k U_k^T$
+
+* Then the query is represented by the centroid of the vectors for its terms
+
+For our example, let's take $k=2$:
+
+```{r}
+# Sigma2
+D2 <- D[1:2, 1:2]
+D2
+```
+
+
+The terms in the concept space are represented by the row vectors of $S_2$ scaled by multiplying with the corresponding singular values of $\Sigma_2$. 
+```{r}
+# S2
+S2 <- S[, 1:2]
+rownames(S2) <- rownames(A)
+S2
+```
+
+```{r}
+# 
+words <- S2 %*% D2
+words
+```
+
+The documents in the concept space are represented by the column vectors of $U_2^T$ scaled by multiplying with the corresponding singular values of $\Sigma_2$. 
+```{r}
+# U2
+U2 <- U[,1:2]
+rownames(U2) <- paste0("d",1:5)
+t(U2)
+```
+
+```{r}
+# 
+docs <- D2 %*% t(U2)
+docs
+```
+
+Now the query is represented by a vector computed as the centroid of the vectors for its terms. In our example, the query is *die, dagger* and so the vector is
+
+```{r}
+q <- (words["die", ] + words["dagger", ]) / 2
+```
+
+In order to rank the documents in relation to query $q$ we will use the cosine distance. In other words, we will compute:
+
+$$
+\frac{d_i \cdot q}{|d_i||q|}
+$$
+
+```{r}
+query_rank <- apply(docs, 2, function(x) {
+  x %*% q / sqrt(sum(x^2)*sum(q^2))
+})
+
+query_rank <- query_rank[order(query_rank, decreasing = TRUE)]
+query_rank
+```
+
+1. Document d1 is closer to query q than d5. As a result d1 is ranked higher than d5. This conforms to our human preference, both Romeo and Juliet died by a dagger.
+2. Document d1 is slightly closer to q than d2. Thus the system is quite intelligent to find out that d1, containing both Romeo and Juliet, is more relevant to the query than d2 even though d2 contains explicitly one of the words in the query while d1 does not. A human user would probably do the same.
+
+Given a query (a bunch of words describing a topic), rank the documents in accordance to their relevance for that query.
+
+It's worth noting that we can perform the inverse operation: given a document (or documents) we can rank the terms accordingly to their relevance inside the document (or documents).  
+
+## Same with `lsa` package
+
+```{r}
+library(lsa)
+# NOW WITH TF-IDF
+td.mat.lsa <- lw_logtf(as.matrix(doc_tdm)) * gw_idf(as.matrix(doc_tdm))
+td.mat.lsa
+```
+
+```{r}
+lsaSpace <- lsa(td.mat.lsa)  # create LSA space
+lsaSpace
+```
+
+```{r}
+dist.mat.lsa <- dist(t(as.textmatrix(lsaSpace)))  # compute distance matrix
+dist.mat.lsa  # check distance mantrix
+```
+
+```{r}
+words <- lsaSpace$tk %*% diag(lsaSpace$sk)
+docs  <- diag(lsaSpace$sk) %*% t(lsaSpace$dk)
+q <- (words["die", ] + words["dagger", ]) / 2
+query_rank <- apply(docs, 2, function(x) {
+  x %*% q / sqrt(sum(x^2)*sum(q^2))
+})
+
+query_rank <- query_rank[order(query_rank, decreasing = TRUE)]
+query_rank
+```
+
+
+https://pdfs.semanticscholar.org/3bce/f21e6bb389cb6f412088b1970dcde477256c.pdf
+http://dspace.ou.nl/bitstream/1820/966/14/2007-03-29___lsatel-2007___package.pdf
+
+## Others
+https://cran.r-project.org/web/packages/LSAfun/index.html
+https://cran.r-project.org/web/packages/svs/index.html
