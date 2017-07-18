@@ -11,13 +11,31 @@ cordis_h2020projects <- fread(myURL)
 library(dplyr)
 health_projects <- filter(cordis_h2020projects, 
                           topics == "SMEInst-06-2016-2017")
+dim(health_projects)
 
 health_projects_SME1 <- filter(health_projects, fundingScheme == "SME-1" )
 health_projects_SME2 <- filter(health_projects, fundingScheme == "SME-2" )
 
 # BUILD CORPUS
 library(tm)
-vProy <- c(health_projects$title, health_projects$objective)
+# vProy <- c(health_projects$title, health_projects$objective)
+vProy <- paste0(health_projects$title, ".", health_projects$objective)
+targetProy <- paste0("A smart ecosystem for the comprehensive clinical process of managing diabetes",
+                     ". ",
+                     "DIASFERA aims to be the first smart ecosystem to empower physicians' and patients’ ability to optimise type I diabetes
+treatments improving their efficiency and lowering the associated economic and social burden.
+Practitioners who treat people with diabetes feel that the efficiency of their treatments would greatly increase if they could be
+there all the time to monitor their effects and consequently adjust them, while encouraging their patients’ adherence to
+healthy lifestyle habits and to follow all the clinical practice guidelines.
+Meanwhile patients say they often find themselves alone and helpless in facing the day-to-day diabetes and miss the
+continued support of professional caregivers.
+Therefore, we need to amplify the physician's ability to attend patients continuously between follow up visits eliminating
+subjectivity as much as possible and focusing on the comprehensive clinical process of managing diabetes.
+Based on our own technology, díaSfera focuses on the comprehensive clinical practice process and is built upon cutting
+edge statistical learning and clinical data processing techniques.")
+vProy <- c(vProy, targetProy)
+idxTgtProy <- length(vProy)
+
 health_proy_corp <- VCorpus(VectorSource(vProy),
                             readerControl = list(language = "en"))
 
@@ -78,8 +96,13 @@ source("lsaRelFuns.R")
 head(relDocs4Query(health_proy_tdm_TfIdf, c("diabet")))
 head(relDocs4Query(health_proy_tdm_TfIdf, c("diabet", "data")))
 
-head(relWordsInDocs(health_proy_tdm_TfIdf, c(42)))
-head(relWordsInDocs(health_proy_tdm_TfIdf, c(80, 34, 88, 70, 12)))
+head(relWordsInDocs(health_proy_tdm_TfIdf, c(idxTgtProy)))
+head(relWordsInDocs(health_proy_tdm_TfIdf, c(idxTgtProy, 24, 42, 6, 34, 12)))
+
+head(relDocs2Docs(health_proy_tdm_TfIdf, c(idxTgtProy)))
+vProy[[24]]
+vProy[[42]]
+head(relDocs2Docs(health_proy_tdm_TfIdf, c(47, 24, 42, 6, 34, 12)))
 
 
 ## NOW WITH BIGRAMS
@@ -99,17 +122,18 @@ inspect(removeSparseTerms(health_proy_tdm_TfIdf2[, 1:10], 0.9))
 grep("diabet", health_proy_tdm_TfIdf2$dimnames$Terms, value = TRUE)
 head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care")))
 vProy[34]
-vProy[70]
+vProy[24]
+vProy[3]
 
-head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care", "ambulatori set")))
+head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care", "blood biomark")))
 head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care", "analysi data",
                                             "big data", "data analysi", 
                                             "data analyt")))
-head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care", "ambulatori set")))
+head(relDocs4Query(health_proy_tdm_TfIdf2, c("diabet care", "blood biomark")))
 
 
-head(relWordsInDocs(health_proy_tdm_TfIdf2, c(88)))
-head(relWordsInDocs(health_proy_tdm_TfIdf2, c(80, 34, 88, 70, 12)))
+head(relWordsInDocs(health_proy_tdm_TfIdf2, c(idxTgtProy)))
+head(relWordsInDocs(health_proy_tdm_TfIdf2, c(34, 3, 6, 42, 10, 24)))
 
 # Probatina 1-grams + 2-grams
 multi_tdm <- rbind(as.matrix(health_proy_tdm_TfIdf),
@@ -128,3 +152,18 @@ intTerms <- grep("diabet", health_proy_tdm_TfIdf2$dimnames$Terms)
 head(relDocs4Query(health_proy_tdm_TfIdf2, 
                    health_proy_tdm_TfIdf2$dimnames$Terms[intTerms]))
 vProy[70]
+
+## lsa facilities
+myLSAspace <- lsa(as.matrix(health_proy_tdm_TfIdf))
+myNewMatrix = as.textmatrix(myLSAspace) 
+myNewMatrix # should look be different!
+
+# compare two terms with the cosine measure
+cosine(myNewMatrix["diabet",], myNewMatrix["clinic",])
+
+# compare two documents with the cosine measure
+cosine(myNewMatrix[,1], myNewMatrix[,2])
+relDocs2Docs(health_proy_tdm_TfIdf, c(1))["2"]
+
+# compare two documents with pearson
+cor(myNewMatrix[,1], myNewMatrix[,2], method="pearson")

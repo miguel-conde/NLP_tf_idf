@@ -47,3 +47,24 @@ relWordsInDocs <- function(tdm, qDocs) {
   query_rank <- query_rank[order(query_rank, decreasing = TRUE)]
   query_rank
 }
+
+# RELevant DOCuments to other DOCumentS
+relDocs2Docs <- function(tdm, qDocs) {
+  A <- as.matrix(tdm)
+  lsaSpace <- lsa(A)  # create LSA space
+  
+  docs  <- diag(lsaSpace$sk) %*% t(lsaSpace$dk)
+  
+  if (length(qDocs) == 1) {
+    q <- docs[, qDocs]
+  } else {
+    q <- apply(docs[, qDocs], 1, mean) # Calc query vector
+  }
+  
+  query_rank <- apply(docs, 2, function(x) {
+    x %*% q / sqrt(sum(x^2)*sum(q^2))
+  })
+  
+  query_rank <- query_rank[order(query_rank, decreasing = TRUE)]
+  query_rank
+}
