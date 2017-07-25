@@ -217,7 +217,7 @@ $$
 
 ### Example in R
 
-**$A$ $m=4 \times n=3$ matrix**
+**$A$, $m=4 \times n=3$ matrix**
 ```{r}
 A <- matrix(c(1,2,3,4,5,6,7,8,9, 10, 11, 12), ncol = 3)
 A
@@ -236,7 +236,7 @@ R_svd <- svd(A, nv = ncol(A), nu = nrow(A))
 
 
 
-**1 - $S = U$ $m=4 \times r=3$ matrix**
+**1 - $S = U$, $m=4 \times r=3$ matrix**
 
 ```{r}
 U
@@ -246,7 +246,7 @@ U
 R_svd$u
 ```
 
-**2 - $\sum$ $r=3 \times r=3$ matrix**
+**2 - $\sum$, $r=3 \times r=3$ matrix**
 ```{r}
 D
 ```
@@ -255,7 +255,7 @@ D
 R_svd$d
 ```
 
-**3 - $S_B = V$ $n=3 \times r=3$ matrix**
+**3 - $S_B = V$, $n=3 \times r=3$ matrix**
 ```{r}
 V
 ```

@@ -1,0 +1,102 @@
+---
+title: "On Singular Value Decomposition"
+author: "Miguel Conde"
+date: "25 de julio de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Any $m \times n$ matrix A can be decomposed as:
+
+$$
+A_{m \times n} = U_{m \times m} D_{m \times n} V_{n \times n}^T
+$$
+If we define:
+$$
+B_{n \times n} = A_{m \times n}^T A_{m \times n}
+$$
+And:
+$$
+C_{m \times m} = A_{m \times n} A_{m \times n}^T
+$$
+
+Then:
+
+* $D_{m \times n}$ is a diagonal matrix whose diagonal is made of the square roots of the eigenvalues of $B_{n \times n}$, ordered in decreasing order. There can be until $n$ distinct eigenvalues $\lambda_i$, but usually only $r \leq n$ of which will be nonzero.
+
+$$
+\lambda_i = \sigma_i^2 \\
+\lambda_1 \geq \lambda_2 \geq ... \geq \lambda_r > 0 \\
+r \leq n \\
+d_1= \sigma_1, d_2 = \sigma_2, ... , d_r = \sigma_r,d_{r+1}= ...= d_{n} = 0, d_{n+1} =... = d_m = 0
+$$
+
+* $V_{n \times n}$ is made of the eigenvectors of $B_{n \times n}$
+
+* $U_{m \times m}$ is made of the eigenvectors of $C_{m \times m}$
+
+
+## Example
+```{r}
+m <- 4
+n <- 3
+A_m_n <- matrix(c(1,2,3,4,5,6,7,8,9, 10, 11, 12), ncol = n)
+A_m_n
+```
+
+```{r}
+B_n_n <- t(A_m_n) %*% A_m_n 
+C_m_m <- A_m_n %*% t(A_m_n)
+eigen_B_n_n <- eigen(B_n_n, symmetric = isSymmetric(A_m_n))
+eigen_C_m_m <- eigen(C_m_m, symmetric = isSymmetric(A_m_n))
+diagonal <- sqrt(eigen_B_n_n$values)
+diagonal
+```
+
+```{r}
+D_m_n <- diag(diagonal, nrow = m, ncol = n)
+D_m_n
+```
+
+```{r}
+U_m_m <- eigen_C_m_m$vectors
+U_m_m
+```
+
+```{r}
+V_n_n <- eigen_B_n_n$vectors
+V_n_n
+```
+
+```{r}
+U_m_m %*% D_m_n %*% t(V_n_n)
+```
+
+```{r}
+R_svd <- svd(A_m_n, nv = ncol(A_m_n), nu = nrow(A_m_n)) 
+R_svd
+```
+
+```{r}
+R_svd$u %*% diag(R_svd$d, nrow = m, ncol = n) %*% t(R_svd$v)
+```
+
+
+## Reduced SVM
+$$
+A_{m \times n} = U_{m \times m} D_{m \times n} V_{n \times n}^T = 
+U_{m \times r} D_{r \times r} V_{r \times n}^T
+$$
+
+
+```{r}
+R_svd <- svd(A_m_n) 
+R_svd
+```
+
+```{r}
+R_svd$u %*% diag(R_svd$d) %*% t(R_svd$v)
+```
