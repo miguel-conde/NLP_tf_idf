@@ -43,7 +43,8 @@ $$
 ```{r}
 m <- 4
 n <- 3
-A_m_n <- matrix(c(1,2,3,4,5,6,7,8,9, 10, 11, 12), ncol = n)
+# A_m_n <- matrix(c(1,2,3,4,5,6,7,8,9, 10, 11, 12), ncol = n)
+A_m_n <- matrix(rnorm(m*n), ncol = n)
 A_m_n
 ```
 
@@ -100,3 +101,18 @@ R_svd
 ```{r}
 R_svd$u %*% diag(R_svd$d) %*% t(R_svd$v)
 ```
+
+## SVD based aproximation
+
+$$
+A_{m \times n} = U_{m \times m} D_{m \times n} V_{n \times n}^T = 
+U_{m \times r} D_{r \times r} V_{r \times n}^T \approx \\
+\approx U_{m \times k} D_{k \times k} V_{k \times n}^T
+$$
+where $k< r$
+
+```{r}
+k <- n - 1
+R_svd$u[1:m, 1:k] %*% diag(R_svd$d)[1:k, 1:k] %*% t(R_svd$v)[1:k, 1:n]
+```
+
